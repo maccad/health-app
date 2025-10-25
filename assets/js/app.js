@@ -81,7 +81,19 @@ function showSleepModal(){
     </div>`,
     didOpen:()=>{
       const b=$('bed'),w=$('wake'),bv=$('bval'),wv=$('wval');
-      const upd=()=>{bedIndex=+b.value;wakeIndex=+w.value;bv.textContent=indexToTime(bedIndex);wv.textContent=indexToTime(wakeIndex);};
+      const upd=()=>{
+        let bed = +b.value;
+        let wake = +w.value;
+        // Constraint: ensure wake time is at least 1 hour (2 steps) after bed time
+        if (wake < bed + 2) {
+            wake = bed + 2;
+            w.value = wake; // Update slider position
+        }
+        bedIndex = bed;
+        wakeIndex = wake;
+        bv.textContent = indexToTime(bedIndex);
+        wv.textContent = indexToTime(wakeIndex);
+      };
       b.oninput=w.oninput=upd;
     }
   }).then(r=>{if(r.isConfirmed)updateSleepSummary();});
@@ -158,11 +170,11 @@ function showBodyMapModal() {
     {name:'Toes (Back Left)', d:'M110,490 h50 v12 h-50 z'},
     {name:'Toes (Back Right)', d:'M140,490 h50 v12 h-50 z'}
   ];
-
+  
   let side='front',temp=[...symptomLocations];
   const draw=()=>{
     const reg=side==='front'?FRONT:BACK;
-    return `<svg viewBox="0 0 300 400" style="max-width:300px">
+    return `<svg viewBox="0 0 300 520" style="max-width:300px">
       ${reg.map(r=>{
         const sel=temp.includes(r.name);
         return `<path data-n="${r.name}" d="${r.d}" fill="${sel?'#fca5a5':'#bfdbfe'}" stroke="${sel?'#dc2626':'#2563eb'}" stroke-width="2"></path>`;
@@ -242,8 +254,9 @@ async function saveLog(event){
 async function loadHistory(){
   const el=$('historyLogs'); el.innerHTML='<p class="text-muted">Loading...</p>';
   try{
-    const res=await fetch(API('get_logs.php'));
-    if(res.status===401){location.href='login.php';return;}
+    // The original app.js relies on the API to handle the authentication check (401 response).
+    const res=await fetch(API('get_logs.php')); 
+    if(res.status===401){location.href='login.php';return;} // Redirects if not logged in
     const data=await res.json();
     if(!data.length){el.innerHTML='<p class="text-muted">No logs yet.</p>';return;}
     el.innerHTML='';
